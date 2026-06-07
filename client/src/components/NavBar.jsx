@@ -23,7 +23,7 @@ const NavBar = () => {
 
         const { data: profile, error } = await supabase
           .from('profiles')
-          .select('is_organiser')
+          .select('*')
           .eq('id', currentUser.id)
           .single()
 
