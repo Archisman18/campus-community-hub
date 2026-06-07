@@ -44,8 +44,8 @@ const OrganiserPanel = () => {
 
         const { data: tournamentRows, error: tournamentError } = await supabase
           .from('tournaments')
-          .select('id, name, game, max_players, status, deadline')
-          .eq('organiser_id', currentUser.id)
+          .select('id, name, game, max_players, status, registration_deadline, organizer_id')
+          .eq('organizer_id', currentUser.id)
           .order('created_at', { ascending: false })
 
         if (tournamentError) throw tournamentError
@@ -84,12 +84,12 @@ const OrganiserPanel = () => {
     }
   }, [navigate])
 
-  const formatDeadline = (deadline) => {
-    if (!deadline) return 'N/A'
+  const formatDeadline = (registration_deadline) => {
+    if (!registration_deadline) return 'N/A'
     return new Intl.DateTimeFormat('en-GB', {
       dateStyle: 'medium',
       timeStyle: 'short',
-    }).format(new Date(deadline))
+    }).format(new Date(registration_deadline))
   }
 
   const gameBadgeClasses = {
@@ -123,6 +123,16 @@ const OrganiserPanel = () => {
           </p>
         </header>
 
+        <div className="mt-6 flex justify-end">
+          <button
+            type="button"
+            onClick={() => navigate('/create-tournament')}
+            className="rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-700"
+          >
+            Create New Tournament
+          </button>
+        </div>
+
         {error && (
           <p className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
             {error}
@@ -137,7 +147,16 @@ const OrganiserPanel = () => {
 
           {tournaments.length === 0 ? (
             <div className="rounded-3xl border border-dashed border-slate-300 bg-white p-8 text-center text-sm text-slate-600">
-              No tournaments found for your account yet.
+              <p>No tournaments found for your account yet.</p>
+              <div className="mt-4">
+                <button
+                  type="button"
+                  onClick={() => navigate('/create-tournament')}
+                  className="rounded-xl bg-slate-900 px-4 py-3 font-semibold text-white transition hover:bg-slate-700"
+                >
+                  Create New Tournament
+                </button>
+              </div>
             </div>
           ) : (
             <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
@@ -174,8 +193,8 @@ const OrganiserPanel = () => {
                       <dd className="mt-1 font-semibold text-slate-900">{tournament.status}</dd>
                     </div>
                     <div className="col-span-2 rounded-2xl bg-slate-50 p-3">
-                      <dt className="text-slate-500">Deadline</dt>
-                      <dd className="mt-1 font-semibold text-slate-900">{formatDeadline(tournament.deadline)}</dd>
+                      <dt className="text-slate-500">Registration Deadline</dt>
+                        <dd className="mt-1 font-semibold text-slate-900">{formatDeadline(tournament.registration_deadline)}</dd>
                     </div>
                   </dl>
                 </article>

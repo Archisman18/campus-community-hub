@@ -16,7 +16,7 @@ const CreateTournament = () => {
     name: '',
     game: GAME_OPTIONS[0],
     max_players: MAX_PLAYERS_OPTIONS[0],
-    deadline: '',
+    registration_deadline: '',
   })
   const navigate = useNavigate()
 
@@ -89,8 +89,8 @@ const CreateTournament = () => {
         name: form.name,
         game: form.game,
         max_players: form.max_players,
-        deadline: form.deadline,
-        organiser_id: user.id,
+        registration_deadline: form.registration_deadline,
+        organizer_id: user.id,
         status: 'registration_open',
       })
 
@@ -184,13 +184,13 @@ const CreateTournament = () => {
             </select>
           </label>
 
-          <label className="block text-sm font-semibold text-slate-700" htmlFor="deadline">
+          <label className="block text-sm font-semibold text-slate-700" htmlFor="registration_deadline">
             Registration Deadline
             <input
-              id="deadline"
-              name="deadline"
+              id="registration_deadline"
+              name="registration_deadline"
               type="datetime-local"
-              value={form.deadline}
+              value={form.registration_deadline}
               onChange={handleChange}
               required
               className="mt-2 w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-slate-900 outline-none transition focus:border-sky-500 focus:ring-2 focus:ring-sky-200"
