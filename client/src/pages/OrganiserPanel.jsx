@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 
+const API_BASE_URL = 'http://localhost:3001'
+
 const OrganiserPanel = () => {
   const [user, setUser] = useState(null)
   const [isOrganiser, setIsOrganiser] = useState(false)
@@ -9,6 +11,9 @@ const OrganiserPanel = () => {
   const [tournaments, setTournaments] = useState([])
   const [disputedMatches, setDisputedMatches] = useState([])
   const [error, setError] = useState('')
+  const [bracketLoadingId, setBracketLoadingId] = useState(null)
+  const [bracketSuccessMap, setBracketSuccessMap] = useState({})
+  const [bracketErrorMap, setBracketErrorMap] = useState({})
   const navigate = useNavigate()
 
   useEffect(() => {
@@ -98,6 +103,45 @@ const OrganiserPanel = () => {
     eFootball: 'bg-emerald-100 text-emerald-800 ring-emerald-200',
   }
 
+  const handleGenerateBracket = async (tournament) => {
+    setBracketLoadingId(tournament.id)
+    setBracketErrorMap((previous) => ({ ...previous, [tournament.id]: '' }))
+
+    try {
+      const { data: sessionData } = await supabase.auth.getSession()
+      const accessToken = sessionData?.session?.access_token
+
+      const response = await fetch(`${API_BASE_URL}/api/bracket/generate`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
+        },
+        body: JSON.stringify({ tournament_id: tournament.id }),
+      })
+
+      const payload = await response.json()
+
+      if (!response.ok) {
+        throw new Error(payload?.error || 'Failed to generate bracket.')
+      }
+
+      setBracketSuccessMap((previous) => ({ ...previous, [tournament.id]: true }))
+
+      setTimeout(() => {
+        navigate(`/bracket/${tournament.id}`)
+      }, 700)
+    } catch (generateError) {
+      console.error(generateError)
+      setBracketErrorMap((previous) => ({
+        ...previous,
+        [tournament.id]: generateError?.message || 'Failed to generate bracket.',
+      }))
+    } finally {
+      setBracketLoadingId(null)
+    }
+  }
+
   if (loading) {
     return (
       <main className="flex min-h-screen items-center justify-center px-4 py-10">
@@ -177,9 +221,15 @@ const OrganiserPanel = () => {
 
                     <button
                       type="button"
-                      className="rounded-xl bg-slate-900 px-3 py-2 text-xs font-semibold text-white transition hover:bg-slate-700"
+                      onClick={() => handleGenerateBracket(tournament)}
+                      disabled={bracketLoadingId === tournament.id || tournament.status === 'bracket_generated'}
+                      className="rounded-xl bg-slate-900 px-3 py-2 text-xs font-semibold text-white transition hover:bg-slate-700 disabled:cursor-not-allowed disabled:bg-slate-400"
                     >
-                      Generate Bracket
+                      {bracketSuccessMap[tournament.id] || tournament.status === 'bracket_generated'
+                        ? 'Bracket Generated!'
+                        : bracketLoadingId === tournament.id
+                          ? 'Generating...'
+                          : 'Generate Bracket'}
                     </button>
                   </div>
 
@@ -197,6 +247,10 @@ const OrganiserPanel = () => {
                         <dd className="mt-1 font-semibold text-slate-900">{formatDeadline(tournament.registration_deadline)}</dd>
                     </div>
                   </dl>
+
+                  {bracketErrorMap[tournament.id] && (
+                    <p className="mt-3 text-sm text-red-700">{bracketErrorMap[tournament.id]}</p>
+                  )}
                 </article>
               ))}
             </div>

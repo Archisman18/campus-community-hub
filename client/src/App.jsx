@@ -5,6 +5,7 @@ import LoginPage from './pages/LoginPage'
 import CreateTournament from './pages/CreateTournament'
 import OrganiserPanel from './pages/OrganiserPanel'
 import TournamentsPage from './pages/TournamentsPage'
+import BracketPage from './pages/BracketPage'
 import NavBar from './components/NavBar'
 import { supabase } from './lib/supabase'
 
@@ -77,6 +78,7 @@ function App() {
             <Route path="tournaments" element={<TournamentsPage />} />
             <Route path="create-tournament" element={<CreateTournament />} />
             <Route path="organiser" element={<OrganiserPanel />} />
+            <Route path="bracket/:tournament_id" element={<BracketPage />} />
           </Route>
         </Route>
       </Routes>
