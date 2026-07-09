@@ -6,7 +6,24 @@ import { supabase } from '../lib/supabase'
 const getDisplayName = (profilesById, playerId) => {
   if (!playerId) return 'TBD'
 
-  return profilesById[playerId] || `Player ${String(playerId).slice(0, 6)}`
+  return profilesById[playerId] ?? 'TBD'
+}
+
+const fetchProfilesByPlayerIds = async (playerIds) => {
+  if (playerIds.length === 0) return {}
+
+  const { data: profiles, error: profilesError } = await supabase
+    .from('profiles')
+    .select('id, username')
+    .in('id', playerIds)
+
+  if (profilesError) throw profilesError
+
+  return Object.fromEntries(
+    (profiles ?? [])
+      .filter((profile) => profile?.id && profile?.username)
+      .map((profile) => [profile.id, profile.username]),
+  )
 }
 
 const buildBracketMatches = (matchRows, profilesById) => {
@@ -107,17 +124,8 @@ const BracketPage = () => {
           if (row.winner_id) playerIds.add(row.winner_id)
         }
 
-        let profilesById = {}
-        if (playerIds.size > 0) {
-          const { data: profiles, error: profilesError } = await supabase
-            .from('profiles')
-            .select('id, username')
-            .in('id', [...playerIds])
-
-          if (profilesError) throw profilesError
-
-          profilesById = Object.fromEntries((profiles ?? []).map((profile) => [profile.id, profile.username]))
-        }
+        const profilesById =
+          playerIds.size > 0 ? await fetchProfilesByPlayerIds([...playerIds]) : {}
 
         if (mounted) {
           setTournament(tournamentData)
@@ -188,6 +196,14 @@ const BracketPage = () => {
                 <SingleEliminationBracket
                   matches={matches}
                   matchComponent={Match}
+                  options={{
+                    style: {
+                      roundHeader: {
+                        isShown: true,
+                        roundTextGenerator: (currentRoundNumber) => `Round ${currentRoundNumber}`,
+                      },
+                    },
+                  }}
                 />
               )}
             </div>
