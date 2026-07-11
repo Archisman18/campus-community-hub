@@ -95,6 +95,12 @@ const LoginPage = () => {
               Register
             </Link>
           </p>
+          <p className="text-center text-sm text-slate-500 mt-2">
+            Are you a tournament organiser?{' '}
+           <Link to="/organiser-login" className="text-blue-600 font-medium">
+             Sign in here
+           </Link>
+          </p>
         </form>
       </section>
     </main>

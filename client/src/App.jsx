@@ -8,10 +8,11 @@ import TournamentsPage from './pages/TournamentsPage'
 import BracketPage from './pages/BracketPage'
 import NavBar from './components/NavBar'
 import { supabase } from './lib/supabase'
+import OrganiserLoginPage from './pages/OrganiserLoginPage'
 
 const Layout = () => {
   const location = useLocation()
-  const hideNav = location.pathname === '/login' || location.pathname === '/register'
+  const hideNav = location.pathname === '/login' || location.pathname === '/register' || location.pathname === '/organiser-login'
 
   return (
     <>
@@ -73,7 +74,9 @@ function App() {
           <Route index element={<RootRedirect isAuthenticated={Boolean(session)} />} />
           <Route path="login" element={<LoginPage />} />
           <Route path="register" element={<RegisterPage />} />
-
+          <Route path="/organiser-login" element={<OrganiserLoginPage />} />
+          <Route path="/match/:match_id" element={<SubmitScore />} />
+          
           <Route element={<RequireAuth isAuthenticated={Boolean(session)} />}>
             <Route path="tournaments" element={<TournamentsPage />} />
             <Route path="create-tournament" element={<CreateTournament />} />
