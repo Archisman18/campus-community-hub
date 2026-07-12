@@ -1,12 +1,61 @@
 import { useEffect, useState } from 'react'
-import { useParams } from 'react-router-dom'
-import { Match, SingleEliminationBracket } from 'react-tournament-brackets'
+import { Link, useParams } from 'react-router-dom'
+import { SingleEliminationBracket } from 'react-tournament-brackets'
 import { supabase } from '../lib/supabase'
 
 const getDisplayName = (profilesById, playerId) => {
   if (!playerId) return 'TBD'
 
   return profilesById[playerId] ?? 'TBD'
+}
+
+const BracketMatchCard = ({ match, topParty, bottomParty, topText, bottomText }) => {
+  const currentUserId = match.currentUserId ?? null
+  const canSubmitScore =
+    match.status === 'pending' &&
+    Boolean(currentUserId) &&
+    (match.player1_id === currentUserId || match.player2_id === currentUserId)
+
+  return (
+    <div className="flex h-full w-full flex-col justify-between rounded-2xl border border-slate-200 bg-white px-3 py-3 shadow-sm">
+      <div className="flex items-start justify-between gap-2">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-sky-700">Round {match.round}</p>
+          <p className="mt-1 text-sm font-semibold text-slate-900">{match.name}</p>
+        </div>
+        {match.status === 'confirmed' && (
+          <span className="inline-flex rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[11px] font-semibold text-emerald-700">
+            Confirmed
+          </span>
+        )}
+        {match.status === 'disputed' && (
+          <span className="inline-flex rounded-full border border-red-200 bg-red-50 px-2 py-0.5 text-[11px] font-semibold text-red-700">
+            Disputed
+          </span>
+        )}
+      </div>
+
+      <div className="mt-3 space-y-2 text-sm text-slate-700">
+        <div className="flex items-center justify-between gap-3 rounded-xl bg-slate-50 px-3 py-2">
+          <span className="truncate font-medium">{topParty?.name ?? topText ?? 'TBD'}</span>
+          <span className="text-xs text-slate-500">{topParty?.resultText ?? ''}</span>
+        </div>
+        <div className="flex items-center justify-between gap-3 rounded-xl bg-slate-50 px-3 py-2">
+          <span className="truncate font-medium">{bottomParty?.name ?? bottomText ?? 'TBD'}</span>
+          <span className="text-xs text-slate-500">{bottomParty?.resultText ?? ''}</span>
+        </div>
+      </div>
+
+      {canSubmitScore && (
+        <Link
+          to={`/match/${match.id}`}
+          className="mt-3 inline-flex w-full items-center justify-center rounded-xl bg-sky-600 px-3 py-2 text-sm font-semibold text-white transition hover:bg-sky-700"
+        >
+          Submit Score
+        </Link>
+      )}
+    </div>
+  )
 }
 
 const fetchProfilesByPlayerIds = async (playerIds) => {
@@ -66,6 +115,10 @@ const buildBracketMatches = (matchRows, profilesById) => {
         name: `Round ${roundNumber} - Match ${index + 1}`,
         nextMatchId: nextMatch?.id ?? null,
         tournamentRoundText: String(roundNumber),
+        round: roundNumber,
+        status: match.status,
+        player1_id: match.player1_id,
+        player2_id: match.player2_id,
         startTime: match.created_at || match.updated_at || new Date().toISOString(),
         state: hasWinner ? 'DONE' : 'NO_PARTY',
         participants: [
@@ -100,6 +153,9 @@ const BracketPage = () => {
 
     const loadBracket = async () => {
       try {
+        const { data: userData } = await supabase.auth.getUser()
+        const activeUserId = userData?.user?.id ?? null
+
         const [{ data: tournamentData, error: tournamentError }, { data: matchRows, error: matchError }] =
           await Promise.all([
             supabase
@@ -129,7 +185,12 @@ const BracketPage = () => {
 
         if (mounted) {
           setTournament(tournamentData)
-          setMatches(buildBracketMatches(matchRows ?? [], profilesById))
+          setMatches(
+            buildBracketMatches(matchRows ?? [], profilesById).map((match) => ({
+              ...match,
+              currentUserId: activeUserId,
+            })),
+          )
         }
       } catch (loadError) {
         console.error(loadError)
@@ -195,7 +256,7 @@ const BracketPage = () => {
               ) : (
                 <SingleEliminationBracket
                   matches={matches}
-                  matchComponent={Match}
+                  matchComponent={BracketMatchCard}
                   options={{
                     style: {
                       roundHeader: {

@@ -6,9 +6,11 @@ import CreateTournament from './pages/CreateTournament'
 import OrganiserPanel from './pages/OrganiserPanel'
 import TournamentsPage from './pages/TournamentsPage'
 import BracketPage from './pages/BracketPage'
+import PlayerProfile from './pages/PlayerProfile'
 import NavBar from './components/NavBar'
 import { supabase } from './lib/supabase'
 import OrganiserLoginPage from './pages/OrganiserLoginPage'
+import SubmitScore from './pages/SubmitScore';
 
 const Layout = () => {
   const location = useLocation()
@@ -76,12 +78,13 @@ function App() {
           <Route path="register" element={<RegisterPage />} />
           <Route path="/organiser-login" element={<OrganiserLoginPage />} />
           <Route path="/match/:match_id" element={<SubmitScore />} />
-          
+
           <Route element={<RequireAuth isAuthenticated={Boolean(session)} />}>
             <Route path="tournaments" element={<TournamentsPage />} />
             <Route path="create-tournament" element={<CreateTournament />} />
             <Route path="organiser" element={<OrganiserPanel />} />
             <Route path="bracket/:tournament_id" element={<BracketPage />} />
+            <Route path="profile" element={<PlayerProfile />} />
           </Route>
         </Route>
       </Routes>

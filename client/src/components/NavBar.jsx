@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 
@@ -62,7 +62,7 @@ const NavBar = () => {
             <Link to="/tournaments" className="text-gray-700 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium">Tournaments</Link>
             <Link to="/leaderboard" className="text-gray-700 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium">Leaderboard</Link>
             <Link to="/matches" className="text-gray-700 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium">My Matches</Link>
-            <Link to="/profile" className="text-gray-700 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium">My Profile</Link>
+            <Link to="/profile" className="text-gray-700 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium">Profile</Link>
             {isOrganiser && (
               <Link to="/organiser" className="text-gray-700 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium">Organiser Panel</Link>
             )}
