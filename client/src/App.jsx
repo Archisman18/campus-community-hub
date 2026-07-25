@@ -11,6 +11,7 @@ import NavBar from './components/NavBar'
 import { supabase } from './lib/supabase'
 import OrganiserLoginPage from './pages/OrganiserLoginPage'
 import SubmitScore from './pages/SubmitScore';
+import MyMatches from './pages/MyMatches';
 
 const Layout = () => {
   const location = useLocation()
@@ -78,7 +79,9 @@ function App() {
           <Route path="register" element={<RegisterPage />} />
           <Route path="/organiser-login" element={<OrganiserLoginPage />} />
           <Route path="/match/:match_id" element={<SubmitScore />} />
-
+          <Route path="/matches" element={<MyMatches />} />
+          <Route path="/leaderboard" element={<div className="min-h-screen bg-slate-50 px-4 py-8 sm:px-6 lg:px-8">Leaderboard Page</div>} />  
+        
           <Route element={<RequireAuth isAuthenticated={Boolean(session)} />}>
             <Route path="tournaments" element={<TournamentsPage />} />
             <Route path="create-tournament" element={<CreateTournament />} />
