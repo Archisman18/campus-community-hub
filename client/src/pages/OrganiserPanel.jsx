@@ -4,12 +4,63 @@ import { supabase } from '../lib/supabase'
 
 const API_BASE_URL = 'http://localhost:3001'
 
+const fetchProfilesByPlayerIds = async (playerIds) => {
+  if (playerIds.length === 0) return {}
+
+  const { data: profiles, error: profilesError } = await supabase
+    .from('profiles')
+    .select('id, username')
+    .in('id', playerIds)
+
+  if (profilesError) throw profilesError
+
+  return Object.fromEntries(
+    (profiles ?? [])
+      .filter((profile) => profile?.id && profile?.username)
+      .map((profile) => [profile.id, profile.username]),
+  )
+}
+
+const getDisplayName = (profilesById, playerId) => profilesById[playerId] ?? 'TBD'
+
+const statusMeta = {
+  pending: {
+    label: 'Pending',
+    className: 'border-slate-200 bg-slate-100 text-slate-700',
+    order: 1,
+  },
+  confirmed: {
+    label: 'Confirmed',
+    className: 'border-emerald-200 bg-emerald-50 text-emerald-700',
+    order: 2,
+  },
+  disputed: {
+    label: 'Disputed',
+    className: 'border-red-200 bg-red-50 text-red-700',
+    order: 0,
+  },
+}
+
+const getStatusMeta = (status) => statusMeta[status] ?? statusMeta.pending
+
+const sortMatchesForReview = (matches) =>
+  [...matches].sort((left, right) => {
+    const statusDiff = getStatusMeta(left.status).order - getStatusMeta(right.status).order
+    if (statusDiff !== 0) return statusDiff
+
+    const leftTime = new Date(left.created_at || left.updated_at || 0).getTime()
+    const rightTime = new Date(right.created_at || right.updated_at || 0).getTime()
+    if (leftTime !== rightTime) return rightTime - leftTime
+
+    return String(left.id).localeCompare(String(right.id))
+  })
+
 const OrganiserPanel = () => {
   const [user, setUser] = useState(null)
   const [isOrganiser, setIsOrganiser] = useState(false)
   const [loading, setLoading] = useState(true)
   const [tournaments, setTournaments] = useState([])
-  const [disputedMatches, setDisputedMatches] = useState([])
+  const [matches, setMatches] = useState([])
   const [error, setError] = useState('')
   const [bracketLoadingId, setBracketLoadingId] = useState(null)
   const [bracketSuccessMap, setBracketSuccessMap] = useState({})
@@ -57,21 +108,43 @@ const OrganiserPanel = () => {
 
         const tournamentIds = (tournamentRows ?? []).map((tournament) => tournament.id)
 
-        let disputedRows = []
+        let matchRows = []
         if (tournamentIds.length > 0) {
-          const { data: matchRows, error: matchError } = await supabase
+          const { data: fetchedMatchRows, error: matchError } = await supabase
             .from('matches')
-            .select('*')
-            .eq('status', 'disputed')
+            .select('id, tournament_id, player1_id, player2_id, round, submission_a, submission_b, status, winner_id, created_at, updated_at')
             .in('tournament_id', tournamentIds)
+            .order('created_at', { ascending: false })
 
           if (matchError) throw matchError
-          disputedRows = matchRows ?? []
+          matchRows = fetchedMatchRows ?? []
         }
+
+        const playerIds = new Set()
+        for (const match of matchRows) {
+          if (match.player1_id) playerIds.add(match.player1_id)
+          if (match.player2_id) playerIds.add(match.player2_id)
+          if (match.winner_id) playerIds.add(match.winner_id)
+        }
+
+        const profilesById = playerIds.size > 0 ? await fetchProfilesByPlayerIds([...playerIds]) : {}
+        const tournamentsById = Object.fromEntries(
+          (tournamentRows ?? []).map((tournament) => [tournament.id, tournament]),
+        )
+
+        const hydratedMatches = sortMatchesForReview(
+          matchRows.map((match) => ({
+            ...match,
+            tournamentName: tournamentsById[match.tournament_id]?.name ?? 'TBD',
+            player1Name: getDisplayName(profilesById, match.player1_id),
+            player2Name: getDisplayName(profilesById, match.player2_id),
+            winnerName: match.status === 'confirmed' ? getDisplayName(profilesById, match.winner_id) : '',
+          })),
+        )
 
         if (mounted) {
           setTournaments(tournamentRows ?? [])
-          setDisputedMatches(disputedRows)
+          setMatches(hydratedMatches)
         }
       } catch (panelError) {
         console.error(panelError)
@@ -244,7 +317,9 @@ const OrganiserPanel = () => {
                     </div>
                     <div className="col-span-2 rounded-2xl bg-slate-50 p-3">
                       <dt className="text-slate-500">Registration Deadline</dt>
-                        <dd className="mt-1 font-semibold text-slate-900">{formatDeadline(tournament.registration_deadline)}</dd>
+                      <dd className="mt-1 font-semibold text-slate-900">
+                        {formatDeadline(tournament.registration_deadline)}
+                      </dd>
                     </div>
                   </dl>
 
@@ -258,21 +333,60 @@ const OrganiserPanel = () => {
         </section>
 
         <section className="space-y-4">
-          <h2 className="font-['Space_Grotesk'] text-xl font-bold text-slate-900">DISPUTED MATCHES</h2>
+          <h2 className="font-['Space_Grotesk'] text-xl font-bold text-slate-900">ALL MATCHES</h2>
 
-          <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-            {disputedMatches.length === 0 ? (
-              <p className="text-sm text-slate-600">No disputed matches found.</p>
+          <div className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
+            {matches.length === 0 ? (
+              <div className="p-6 text-sm text-slate-600">No matches yet.</div>
             ) : (
-              <div className="space-y-3">
-                {disputedMatches.map((match) => (
-                  <div
-                    key={match.id}
-                    className="rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700"
-                  >
-                    Match ID: {match.id}
-                  </div>
-                ))}
+              <div className="overflow-x-auto">
+                <table className="min-w-full divide-y divide-slate-200 text-left text-sm">
+                  <thead className="bg-slate-50 text-xs uppercase tracking-[0.18em] text-slate-500">
+                    <tr>
+                      <th className="px-5 py-4 font-semibold">Tournament</th>
+                      <th className="px-5 py-4 font-semibold">Round</th>
+                      <th className="px-5 py-4 font-semibold">Players</th>
+                      <th className="px-5 py-4 font-semibold">Scores</th>
+                      <th className="px-5 py-4 font-semibold">Status</th>
+                      <th className="px-5 py-4 font-semibold">Winner</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-200 bg-white">
+                    {matches.map((match) => {
+                      const meta = getStatusMeta(match.status)
+                      const hasSubmissions =
+                        match.submission_a !== null &&
+                        match.submission_a !== undefined &&
+                        match.submission_b !== null &&
+                        match.submission_b !== undefined
+
+                      return (
+                        <tr key={match.id} className="align-top hover:bg-slate-50/80">
+                          <td className="px-5 py-4 font-medium text-slate-900">{match.tournamentName}</td>
+                          <td className="px-5 py-4 text-slate-700">Round {match.round ?? 'TBD'}</td>
+                          <td className="px-5 py-4 text-slate-700">
+                            {match.player1Name} vs {match.player2Name}
+                          </td>
+                          <td className="px-5 py-4 text-slate-700">
+                            {hasSubmissions
+                              ? `${match.player1Name}: ${match.submission_a} — ${match.player2Name}: ${match.submission_b}`
+                              : 'Waiting on submissions'}
+                          </td>
+                          <td className="px-5 py-4">
+                            <span
+                              className={`inline-flex rounded-full border px-2.5 py-1 text-xs font-semibold ${meta.className}`}
+                            >
+                              {meta.label}
+                            </span>
+                          </td>
+                          <td className="px-5 py-4 text-slate-700">
+                            {match.status === 'confirmed' ? match.winnerName : '—'}
+                          </td>
+                        </tr>
+                      )
+                    })}
+                  </tbody>
+                </table>
               </div>
             )}
           </div>
