@@ -71,7 +71,20 @@ app.post('/api/bracket/generate', async (req, res) => {
       return res.status(404).json({ error: 'Tournament not found.' })
     }
 
-    console.log('tournament:', tournament)
+   console.log('tournament:', tournament)
+
+    const { data: existingMatches, error: existingMatchesError } = await supabase
+      .from('matches')
+      .select('id')
+      .eq('tournament_id', tournament_id)
+
+    if (existingMatchesError) throw existingMatchesError
+
+    if (existingMatches && existingMatches.length > 0) {
+      return res.status(409).json({
+        error: 'A bracket has already been generated for this tournament.',
+      })
+    }
 
     const { data: registrations, error: registrationsError } = await supabase
       .from('tournament_registrations')
@@ -135,7 +148,14 @@ app.post('/api/bracket/generate', async (req, res) => {
       .insert(matchesToInsert)
       .select('*')
 
-    if (insertError) throw insertError
+    if (insertError) {
+      if (insertError.code === '23505') {
+        return res.status(409).json({
+          error: 'A bracket has already been generated for this tournament.',
+        })
+      }
+      throw insertError
+    }
 
     console.log('inserted matches:', insertedMatches)
 
