@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 
@@ -61,106 +61,128 @@ const OrganiserPanel = () => {
   const [loading, setLoading] = useState(true)
   const [tournaments, setTournaments] = useState([])
   const [matches, setMatches] = useState([])
+  const [selectedWinnerByMatchId, setSelectedWinnerByMatchId] = useState({})
+  const [confirmingMatchMap, setConfirmingMatchMap] = useState({})
+  const [matchErrorMap, setMatchErrorMap] = useState({})
   const [error, setError] = useState('')
   const [bracketLoadingId, setBracketLoadingId] = useState(null)
   const [bracketSuccessMap, setBracketSuccessMap] = useState({})
   const [bracketErrorMap, setBracketErrorMap] = useState({})
   const navigate = useNavigate()
 
-  useEffect(() => {
-    let mounted = true
+  const loadPanel = useCallback(async ({ preserveLoading = false } = {}) => {
+    try {
+      if (!preserveLoading) {
+        setLoading(true)
+      }
 
-    const loadPanel = async () => {
-      try {
-        const { data: userData, error: userError } = await supabase.auth.getUser()
-        if (userError) throw userError
+      const { data: userData, error: userError } = await supabase.auth.getUser()
+      if (userError) throw userError
 
-        const currentUser = userData?.user ?? null
-        if (!currentUser) {
-          navigate('/login')
-          return
-        }
+      const currentUser = userData?.user ?? null
+      if (!currentUser) {
+        navigate('/login')
+        return false
+      }
 
-        if (mounted) setUser(currentUser)
+      setUser(currentUser)
 
-        const { data: profile, error: profileError } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', currentUser.id)
-          .single()
+      const { data: profile, error: profileError } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', currentUser.id)
+        .single()
 
-        if (profileError) throw profileError
+      if (profileError) throw profileError
 
-        if (!profile?.is_organiser) {
-          navigate('/tournaments')
-          return
-        }
+      if (!profile?.is_organiser) {
+        navigate('/tournaments')
+        return false
+      }
 
-        if (mounted) setIsOrganiser(true)
+      setIsOrganiser(true)
 
-        const { data: tournamentRows, error: tournamentError } = await supabase
-          .from('tournaments')
-          .select('id, name, game, max_players, status, registration_deadline, organizer_id')
-          .eq('organizer_id', currentUser.id)
+      const { data: tournamentRows, error: tournamentError } = await supabase
+        .from('tournaments')
+        .select('id, name, game, max_players, status, registration_deadline, organizer_id')
+        .eq('organizer_id', currentUser.id)
+        .order('created_at', { ascending: false })
+
+      if (tournamentError) throw tournamentError
+
+      const tournamentIds = (tournamentRows ?? []).map((tournament) => tournament.id)
+
+      let matchRows = []
+      if (tournamentIds.length > 0) {
+        const { data: fetchedMatchRows, error: matchError } = await supabase
+          .from('matches')
+          .select('id, tournament_id, player1_id, player2_id, round, submission_a, submission_b, status, winner_id, created_at, updated_at')
+          .in('tournament_id', tournamentIds)
           .order('created_at', { ascending: false })
 
-        if (tournamentError) throw tournamentError
+        if (matchError) throw matchError
+        matchRows = fetchedMatchRows ?? []
+      }
 
-        const tournamentIds = (tournamentRows ?? []).map((tournament) => tournament.id)
+      const playerIds = new Set()
+      for (const match of matchRows) {
+        if (match.player1_id) playerIds.add(match.player1_id)
+        if (match.player2_id) playerIds.add(match.player2_id)
+        if (match.winner_id) playerIds.add(match.winner_id)
+      }
 
-        let matchRows = []
-        if (tournamentIds.length > 0) {
-          const { data: fetchedMatchRows, error: matchError } = await supabase
-            .from('matches')
-            .select('id, tournament_id, player1_id, player2_id, round, submission_a, submission_b, status, winner_id, created_at, updated_at')
-            .in('tournament_id', tournamentIds)
-            .order('created_at', { ascending: false })
+      const profilesById = playerIds.size > 0 ? await fetchProfilesByPlayerIds([...playerIds]) : {}
+      const tournamentsById = Object.fromEntries(
+        (tournamentRows ?? []).map((tournament) => [tournament.id, tournament]),
+      )
 
-          if (matchError) throw matchError
-          matchRows = fetchedMatchRows ?? []
+      const hydratedMatches = sortMatchesForReview(
+        matchRows.map((match) => ({
+          ...match,
+          tournamentName: tournamentsById[match.tournament_id]?.name ?? 'TBD',
+          player1Name: getDisplayName(profilesById, match.player1_id),
+          player2Name: getDisplayName(profilesById, match.player2_id),
+          winnerName: match.status === 'confirmed' ? getDisplayName(profilesById, match.winner_id) : '',
+        })),
+      )
+
+      setTournaments(tournamentRows ?? [])
+      setMatches(hydratedMatches)
+      setSelectedWinnerByMatchId((previous) => {
+        const nextSelections = { ...previous }
+
+        for (const match of hydratedMatches) {
+          if (match.status === 'confirmed') {
+            delete nextSelections[match.id]
+            continue
+          }
+
+          if (!nextSelections[match.id]) {
+            nextSelections[match.id] = match.player1_id ?? match.player2_id ?? ''
+          }
         }
 
-        const playerIds = new Set()
-        for (const match of matchRows) {
-          if (match.player1_id) playerIds.add(match.player1_id)
-          if (match.player2_id) playerIds.add(match.player2_id)
-          if (match.winner_id) playerIds.add(match.winner_id)
-        }
+        return nextSelections
+      })
 
-        const profilesById = playerIds.size > 0 ? await fetchProfilesByPlayerIds([...playerIds]) : {}
-        const tournamentsById = Object.fromEntries(
-          (tournamentRows ?? []).map((tournament) => [tournament.id, tournament]),
-        )
-
-        const hydratedMatches = sortMatchesForReview(
-          matchRows.map((match) => ({
-            ...match,
-            tournamentName: tournamentsById[match.tournament_id]?.name ?? 'TBD',
-            player1Name: getDisplayName(profilesById, match.player1_id),
-            player2Name: getDisplayName(profilesById, match.player2_id),
-            winnerName: match.status === 'confirmed' ? getDisplayName(profilesById, match.winner_id) : '',
-          })),
-        )
-
-        if (mounted) {
-          setTournaments(tournamentRows ?? [])
-          setMatches(hydratedMatches)
-        }
-      } catch (panelError) {
-        console.error(panelError)
-        setError(panelError?.message || 'Failed to load organiser panel.')
-        navigate('/tournaments')
-      } finally {
-        if (mounted) setLoading(false)
+      return true
+    } catch (panelError) {
+      console.error(panelError)
+      setError(panelError?.message || 'Failed to load organiser panel.')
+      navigate('/tournaments')
+      return false
+    } finally {
+      if (!preserveLoading) {
+        setLoading(false)
       }
     }
+  }, [navigate])
 
+  useEffect(() => {
     loadPanel()
 
-    return () => {
-      mounted = false
-    }
-  }, [navigate])
+    return undefined
+  }, [loadPanel])
 
   const formatDeadline = (registration_deadline) => {
     if (!registration_deadline) return 'N/A'
@@ -212,6 +234,51 @@ const OrganiserPanel = () => {
       }))
     } finally {
       setBracketLoadingId(null)
+    }
+  }
+
+  const handleConfirmWinner = async (match) => {
+    const selectedWinnerId = selectedWinnerByMatchId[match.id] ?? match.player1_id ?? match.player2_id ?? ''
+
+    if (!selectedWinnerId) {
+      setMatchErrorMap((previous) => ({
+        ...previous,
+        [match.id]: 'Please choose a winner before confirming.',
+      }))
+      return
+    }
+
+    setConfirmingMatchMap((previous) => ({ ...previous, [match.id]: true }))
+    setMatchErrorMap((previous) => ({ ...previous, [match.id]: '' }))
+
+    try {
+      const { data: sessionData } = await supabase.auth.getSession()
+      const accessToken = sessionData?.session?.access_token
+
+      const response = await fetch(`${API_BASE_URL}/api/matches/${match.id}/confirm`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
+        },
+        body: JSON.stringify({ winner_id: selectedWinnerId }),
+      })
+
+      const payload = await response.json()
+
+      if (!response.ok) {
+        throw new Error(payload?.error || 'Failed to confirm winner.')
+      }
+
+      await loadPanel({ preserveLoading: true })
+    } catch (confirmError) {
+      console.error(confirmError)
+      setMatchErrorMap((previous) => ({
+        ...previous,
+        [match.id]: confirmError?.message || 'Failed to confirm winner.',
+      }))
+    } finally {
+      setConfirmingMatchMap((previous) => ({ ...previous, [match.id]: false }))
     }
   }
 
@@ -380,7 +447,40 @@ const OrganiserPanel = () => {
                             </span>
                           </td>
                           <td className="px-5 py-4 text-slate-700">
-                            {match.status === 'confirmed' ? match.winnerName : '—'}
+                            {match.status === 'confirmed' ? (
+                              match.winnerName
+                            ) : (
+                              <div className="space-y-2">
+                                <div className="flex flex-wrap items-center gap-2">
+                                  <select
+                                    value={selectedWinnerByMatchId[match.id] ?? match.player1_id ?? match.player2_id ?? ''}
+                                    onChange={(event) =>
+                                      setSelectedWinnerByMatchId((previous) => ({
+                                        ...previous,
+                                        [match.id]: event.target.value,
+                                      }))
+                                    }
+                                    className="min-w-0 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:border-slate-900 focus:outline-none"
+                                  >
+                                    <option value={match.player1_id}>{match.player1Name}</option>
+                                    <option value={match.player2_id}>{match.player2Name}</option>
+                                  </select>
+
+                                  <button
+                                    type="button"
+                                    onClick={() => handleConfirmWinner(match)}
+                                    disabled={Boolean(confirmingMatchMap[match.id])}
+                                    className="rounded-lg bg-slate-900 px-3 py-2 text-xs font-semibold text-white transition hover:bg-slate-700 disabled:cursor-not-allowed disabled:bg-slate-400"
+                                  >
+                                    {confirmingMatchMap[match.id] ? 'Confirming...' : 'Confirm'}
+                                  </button>
+                                </div>
+
+                                {matchErrorMap[match.id] && (
+                                  <p className="text-xs text-red-700">{matchErrorMap[match.id]}</p>
+                                )}
+                              </div>
+                            )}
                           </td>
                         </tr>
                       )

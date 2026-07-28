@@ -9,6 +9,9 @@ const app = express()
 app.use(cors())
 app.use(express.json())
 
+const matchesRouter = require('./routes/matches')
+app.use('/api/matches', matchesRouter)
+
 const supabaseUrl =
   process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || 'https://grwplvhedmvzjediuflr.supabase.co'
 const supabaseServiceRoleKey =
