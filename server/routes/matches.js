@@ -33,19 +33,33 @@ router.post('/:match_id/confirm', async (req, res) => {
       winnerRow.elo, loserRow.elo, game, winnerRow.matches_played, loserRow.matches_played
     );
 
-    await supabase.from('player_elo').update({
+    const { error: winnerUpdateErr } = await supabase.from('player_elo').update({
       elo: winnerNewElo, matches_played: winnerRow.matches_played + 1,
-      wins: winnerRow.wins + 1, last_updated: new Date().toISOString(),
+      wins: winnerRow.wins + 1,
     }).eq('user_id', winner_id).eq('game', game);
+    if (winnerUpdateErr) throw winnerUpdateErr;
 
-    await supabase.from('player_elo').update({
+    const { error: loserUpdateErr } = await supabase.from('player_elo').update({
       elo: loserNewElo, matches_played: loserRow.matches_played + 1,
-      losses: loserRow.losses + 1, last_updated: new Date().toISOString(),
+      losses: loserRow.losses + 1,
     }).eq('user_id', loser_id).eq('game', game);
-
+    if (loserUpdateErr) throw loserUpdateErr;
     await supabase.from('matches').update({
       status: 'confirmed', winner_id, updated_at: new Date().toISOString(),
     }).eq('id', match_id);
+
+    await supabase.from('notifications').insert([
+      {
+        user_id: winner_id,
+        message: `You won your ${game} match!`,
+        match_id,
+      },
+      {
+        user_id: loser_id,
+        message: `You lost your ${game} match. Better luck next time!`,
+        match_id,
+      },
+    ]);
 
     res.json({ winnerNewElo, loserNewElo });
   } catch (err) {

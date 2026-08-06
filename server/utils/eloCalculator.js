@@ -1,7 +1,8 @@
-const K_FACTORS = { bgmi: 28, freefire: 32, eFootball: 16 };
+const K_FACTORS = { BGMI: 28, 'Free Fire': 32, eFootball: 16 };
+const DEFAULT_K_FACTOR = 24;
 
 function getKFactor(game, matchesPlayed) {
-  const base = K_FACTORS[game];
+  const base = K_FACTORS[game] ?? DEFAULT_K_FACTOR;
   if (matchesPlayed <= 5) return base * 1.5;
   if (matchesPlayed <= 15) return base * 1.0;
   return base * 0.6;

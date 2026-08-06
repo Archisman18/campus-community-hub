@@ -91,14 +91,20 @@ app.post('/api/bracket/generate', async (req, res) => {
 
     const { data: registrations, error: registrationsError } = await supabase
       .from('tournament_registrations')
-      .select('user_id, registered_at')
+      .select('*')
       .eq('tournament_id', tournament_id)
 
     if (registrationsError) throw registrationsError
 
     console.log('registrations:', registrations)
 
-    const registeredUsers = registrations ?? []
+    const registeredUsers = (registrations ?? [])
+      .map((row) => ({
+        ...row,
+        user_id: row.user_id ?? row.userId ?? row.player_id ?? row.playerId ?? null,
+      }))
+      .filter((row) => Boolean(row.user_id))
+
     if (registeredUsers.length < 2) {
       return res.status(400).json({ error: 'At least 2 registered players are required to generate a bracket.' })
     }

@@ -35,13 +35,13 @@ const BracketMatchCard = ({ match, topParty, bottomParty, topText, bottomText })
         )}
       </div>
 
-      <div className="mt-3 space-y-2 text-sm text-slate-700">
+      <div className="mt-3 space-y-2">
         <div className="flex items-center justify-between gap-3 rounded-xl bg-slate-50 px-3 py-2">
-          <span className="truncate font-medium">{topParty?.name ?? topText ?? 'TBD'}</span>
+          <span className="truncate font-medium">{match.player1Name ?? topParty?.name ?? topText ?? 'TBD'}</span>
           <span className="text-xs text-slate-500">{topParty?.resultText ?? ''}</span>
         </div>
         <div className="flex items-center justify-between gap-3 rounded-xl bg-slate-50 px-3 py-2">
-          <span className="truncate font-medium">{bottomParty?.name ?? bottomText ?? 'TBD'}</span>
+          <span className="truncate font-medium">{match.player2Name ?? bottomParty?.name ?? bottomText ?? 'TBD'}</span>
           <span className="text-xs text-slate-500">{bottomParty?.resultText ?? ''}</span>
         </div>
       </div>
@@ -119,6 +119,8 @@ const buildBracketMatches = (matchRows, profilesById) => {
         status: match.status,
         player1_id: match.player1_id,
         player2_id: match.player2_id,
+        player1Name,
+        player2Name,
         startTime: match.created_at || match.updated_at || new Date().toISOString(),
         state: hasWinner ? 'DONE' : 'NO_PARTY',
         participants: [
