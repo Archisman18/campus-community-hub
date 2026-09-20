@@ -11,7 +11,6 @@ const TournamentsPage = () => {
   const [tournaments, setTournaments] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
-  const [user, setUser] = useState(null)
   const [joinedIds, setJoinedIds] = useState(new Set())
   const [submittingId, setSubmittingId] = useState(null)
   const [errorsMap, setErrorsMap] = useState({})
@@ -39,7 +38,6 @@ const TournamentsPage = () => {
           // after loading tournaments, also load current user and their registrations
           const { data: userData } = await supabase.auth.getUser()
           const currentUser = userData?.user ?? null
-          if (mounted) setUser(currentUser)
 
           if (currentUser && (data ?? []).length > 0) {
             const tournamentIds = (data ?? []).map((t) => t.id)
