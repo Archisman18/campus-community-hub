@@ -1,5 +1,6 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
+import { supabase } from '../lib/supabase'
 import arenaBg from '../assets/arena-bg.jpg'
 
 // Premium vector SVG icons
@@ -25,23 +26,6 @@ const Icons = {
       <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
     </svg>
   ),
-  Target: () => (
-    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
-      <circle cx="12" cy="12" r="9" />
-      <circle cx="12" cy="12" r="5" />
-      <circle cx="12" cy="12" r="1.5" />
-    </svg>
-  ),
-  Flame: () => (
-    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
-      <path strokeLinecap="round" strokeLinejoin="round" d="M15.362 5.214A8.252 8.252 0 0112 21 8.25 8.25 0 016.038 7.048 8.287 8.287 0 009 9.6a8.983 8.983 0 013.361-6.867 8.21 8.21 0 003 2.48z" />
-    </svg>
-  ),
-  Activity: () => (
-    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
-      <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 13.5l10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75z" />
-    </svg>
-  ),
   Chart: () => (
     <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
       <path strokeLinecap="round" strokeLinejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 013 19.875v-6.75zM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V8.625zM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V4.125z" />
@@ -55,83 +39,48 @@ const Icons = {
       <path strokeLinecap="round" strokeLinejoin="round" d="M6 9v6m0-6a9 9 0 019-9h3m-9 9a9 9 0 009 9h3" />
     </svg>
   ),
+  Radio: () => (
+    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <circle cx="12" cy="12" r="2" />
+      <path strokeLinecap="round" strokeLinejoin="round" d="M16.24 7.76a6 6 0 010 8.49m-8.48-.01a6 6 0 010-8.49m11.31-2.82a10 10 0 010 14.14m-14.14 0a10 10 0 010-14.14" />
+    </svg>
+  ),
+  Calendar: () => (
+    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5" />
+    </svg>
+  ),
+  Refresh: () => (
+    <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99" />
+    </svg>
+  )
 }
 
-const GAMES = [
-  {
-    id: 'bgmi',
+const GAME_INFO = {
+  BGMI: {
     tag: 'BATTLE ROYALE',
     name: 'BGMI',
     subtitle: 'Battlegrounds Mobile India',
     mode: 'Squads & Duos · Erangel',
-    tournamentsCount: '12 Active Brackets',
-    bracket: {
-      seriesTitle: 'COLLEGIATE CHAMPIONSHIP',
-      stage: 'GRAND FINALS // BO5',
-      map: 'Erangel (Zone 6)',
-      eloImpact: '+42 / -26 ELO',
-      semisA: { team1: 'VORTEX ESPORTS', seed1: '01', score1: 3, team2: 'PHANTOM GAMING', seed2: '04', score2: 1, win: 1 },
-      semisB: { team1: 'TITAN SQUAD', seed1: '02', score1: 1, team2: 'APEX RAIDER', seed2: '03', score2: 3, win: 2 },
-      final: {
-        team1: 'VORTEX ESPORTS',
-        team2: 'APEX RAIDER',
-        score1: 2,
-        score2: 1,
-        status: 'MATCH 4 LIVE',
-      }
-    }
   },
-  {
-    id: 'freefire',
+  'Free Fire': {
     tag: 'TACTICAL 4V4',
     name: 'FREE FIRE',
     subtitle: 'Free Fire MAX Clash Squad',
     mode: 'Clash Squad Ranked · Bermuda',
-    tournamentsCount: '8 Active Brackets',
-    bracket: {
-      seriesTitle: 'VARSITY CLASH INVITATIONAL',
-      stage: 'CHAMPIONSHIP DECIDER // BO7',
-      map: 'Bermuda (Clock Tower)',
-      eloImpact: '+38 / -22 ELO',
-      semisA: { team1: 'IGNITE CAMPUS', seed1: '01', score1: 4, team2: 'SHADOW LEGION', seed2: '04', score2: 2, win: 1 },
-      semisB: { team1: 'BLAZE SQUAD', seed1: '02', score1: 3, team2: 'NIGHT RAID', seed2: '03', score2: 4, win: 2 },
-      final: {
-        team1: 'IGNITE CAMPUS',
-        team2: 'NIGHT RAID',
-        score1: 3,
-        score2: 3,
-        status: 'DECIDER ROUND',
-      }
-    }
   },
-  {
-    id: 'efootball',
+  eFootball: {
     tag: '1V1 COMPETITIVE',
     name: 'eFOOTBALL',
     subtitle: 'eFootball 2026 Competitive League',
     mode: 'Solo Division · Regulation & ET',
-    tournamentsCount: '16 Active Brackets',
-    bracket: {
-      seriesTitle: 'COLLEGE DERBY MASTERS',
-      stage: 'NATIONAL FINAL // 1V1',
-      map: 'Camp Nou Arena',
-      eloImpact: '+48 / -32 ELO',
-      semisA: { team1: 'Dutta_R9', seed1: '01', score1: 2, team2: 'Kolkata_FC', seed2: '04', score2: 0, win: 1 },
-      semisB: { team1: 'Apex_Striker', seed1: '02', score1: 1, team2: 'Phantom_Messi', seed2: '03', score2: 3, win: 2 },
-      final: {
-        team1: 'Dutta_R9',
-        team2: 'Phantom_Messi',
-        score1: 2,
-        score2: 2,
-        status: 'EXTRA TIME',
-      }
-    }
   }
-]
+}
 
 const STATS = [
   { value: '1,850+', label: 'Registered Athletes' },
-  { value: '124', label: 'Completed Cups' },
+  { value: '100%', label: 'Automated Brackets' },
   { value: '4,890', label: 'Matches Logged' },
   { value: '99.8%', label: 'Fair-Play Accuracy' },
 ]
@@ -158,31 +107,123 @@ const FEATURES = [
 ]
 
 export default function LandingPage({ isAuthenticated }) {
-  const [activeGame, setActiveGame] = useState(GAMES[0])
+  const [selectedGameKey, setSelectedGameKey] = useState('BGMI')
+  
+  // Real database telemetry state
+  const [loadingBackend, setLoadingBackend] = useState(true)
+  const [liveTournament, setLiveTournament] = useState(null)
+  const [liveMatches, setLiveMatches] = useState([])
+  const [upcomingTournament, setUpcomingTournament] = useState(null)
+  const [gameCounts, setGameCounts] = useState({ BGMI: 0, 'Free Fire': 0, eFootball: 0 })
+  const [lastChecked, setLastChecked] = useState(new Date())
+
+  // Fetch live tournament and match telemetry from the backend / Supabase
+  const fetchLiveTelemetry = async () => {
+    try {
+      setLoadingBackend(true)
+
+      // 1. Check all tournaments to count active cups by game
+      const { data: allTournaments } = await supabase
+        .from('tournaments')
+        .select('id, name, game, status, max_players, registration_deadline')
+
+      const counts = { BGMI: 0, 'Free Fire': 0, eFootball: 0 }
+      if (allTournaments) {
+        for (const t of allTournaments) {
+          if (counts[t.game] !== undefined && t.status !== 'completed') {
+            counts[t.game] += 1
+          }
+        }
+      }
+      setGameCounts(counts)
+
+      // 2. Query for an ACTIVE / LIVE tournament (status === 'bracket_generated' or 'in_progress')
+      const activeTournaments = (allTournaments || []).filter(
+        (t) => t.status === 'bracket_generated' || t.status === 'in_progress' || t.status === 'live'
+      )
+
+      if (activeTournaments.length > 0) {
+        const currentActive = activeTournaments[0]
+
+        // Fetch matches for this active tournament
+        const { data: matchesData } = await supabase
+          .from('matches')
+          .select('*')
+          .eq('tournament_id', currentActive.id)
+          .order('round', { ascending: false })
+
+        // Fetch usernames for the involved players
+        const playerIds = [
+          ...new Set((matchesData || []).flatMap((m) => [m.player1_id, m.player2_id]).filter(Boolean)),
+        ]
+
+        let profilesById = {}
+        if (playerIds.length > 0) {
+          const { data: profiles } = await supabase
+            .from('profiles')
+            .select('id, username')
+            .in('id', playerIds)
+
+          profilesById = (profiles || []).reduce((acc, p) => {
+            acc[p.id] = p.username
+            return acc
+          }, {})
+        }
+
+        const hydratedMatches = (matchesData || []).map((m) => ({
+          ...m,
+          player1Name: profilesById[m.player1_id] || 'TBD',
+          player2Name: profilesById[m.player2_id] || 'TBD',
+        }))
+
+        setLiveTournament(currentActive)
+        setLiveMatches(hydratedMatches)
+        setUpcomingTournament(null)
+      } else {
+        // No live bracket currently running
+        setLiveTournament(null)
+        setLiveMatches([])
+
+        // Check if there are upcoming tournaments open for registration
+        const upcoming = (allTournaments || [])
+          .filter((t) => t.status === 'registration_open')
+          .sort((a, b) => new Date(a.registration_deadline || 0) - new Date(b.registration_deadline || 0))[0]
+
+        setUpcomingTournament(upcoming || null)
+      }
+
+      setLastChecked(new Date())
+    } catch (err) {
+      console.error('Error fetching live tournament telemetry:', err)
+    } finally {
+      setLoadingBackend(false)
+    }
+  }
+
+  useEffect(() => {
+    fetchLiveTelemetry()
+
+    // Poll backend every 25 seconds for live match updates
+    const interval = setInterval(fetchLiveTelemetry, 25000)
+    return () => clearInterval(interval)
+  }, [])
 
   return (
     <div className="relative min-h-screen w-full bg-[#05070E] text-slate-100 font-sans selection:bg-cyan-400 selection:text-black antialiased overflow-x-hidden">
       
       {/* ========================================================
           HERO BACKGROUND: REAL ESPORTS ARENA PHOTO (INTEGRATED)
-          High clarity with cinematic luxury vignette & lighting
          ======================================================== */}
       <div className="absolute top-0 left-0 right-0 h-[880px] lg:h-[940px] overflow-hidden pointer-events-none z-0">
-        {/* Background Image: Crisp, vibrant arena stage with high contrast */}
         <img
           src={arenaBg}
           alt="Esports Championship Arena Stage"
           className="w-full h-full object-cover object-center scale-100 filter brightness-95 contrast-110"
         />
 
-        {/* Cinematic gradient overlays:
-            1. Left side shadow to ensure 100% sharp text legibility
-            2. Top bar darken for navbar glassmorphism
-            3. Bottom fade to seamlessly transition into deep onyx slate */}
+        {/* Cinematic gradient overlays for legibility */}
         <div className="absolute inset-0 bg-gradient-to-r from-[#05070E] via-[#05070E]/80 to-transparent" />
         <div className="absolute inset-0 bg-gradient-to-t from-[#05070E] via-[#05070E]/50 to-[#05070E]/70" />
-        
-        {/* Subtle radial cyan stage spotlight */}
         <div className="absolute top-1/4 right-1/4 w-[600px] h-[600px] bg-cyan-500/10 rounded-full blur-[140px] pointer-events-none" />
       </div>
 
@@ -213,15 +254,35 @@ export default function LandingPage({ isAuthenticated }) {
             </div>
           </Link>
 
-          {/* Center Status: Live Matchmaking Telemetry */}
+          {/* Center Status: Dynamic Backend Telemetry */}
           <div className="hidden lg:flex items-center gap-3 px-4 py-1.5 rounded-full bg-[#0B0F19]/90 border border-white/10 text-xs font-mono">
-            <span className="relative flex h-2 w-2">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
-              <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-400" />
-            </span>
-            <span className="text-emerald-400 font-semibold tracking-wider">MATCHMAKING ONLINE</span>
-            <span className="text-white/20">|</span>
-            <span className="text-slate-400 text-[11px]">18ms REGION: ASIA-SOUTH</span>
+            {liveTournament ? (
+              <>
+                <span className="relative flex h-2 w-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75" />
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500" />
+                </span>
+                <span className="text-red-400 font-bold tracking-wider uppercase">TOURNAMENT LIVE: {liveTournament.name}</span>
+              </>
+            ) : upcomingTournament ? (
+              <>
+                <span className="relative flex h-2 w-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-cyan-400 opacity-75" />
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-cyan-400" />
+                </span>
+                <span className="text-cyan-400 font-semibold tracking-wider">REGISTRATION OPEN: {upcomingTournament.name}</span>
+              </>
+            ) : (
+              <>
+                <span className="relative flex h-2 w-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-400" />
+                </span>
+                <span className="text-emerald-400 font-semibold tracking-wider">MATCHMAKING ONLINE</span>
+                <span className="text-white/20">|</span>
+                <span className="text-slate-400 text-[11px]">CAMPUS ARENA IDLE</span>
+              </>
+            )}
           </div>
 
           {/* Right Action Controls */}
@@ -256,7 +317,7 @@ export default function LandingPage({ isAuthenticated }) {
       </header>
 
       {/* ========================================================
-          HERO SECTION: ENTER THE ARENA + TOURNAMENT HUD
+          HERO SECTION: ENTER THE ARENA + DYNAMIC TOURNAMENT HUD
          ======================================================== */}
       <section className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-10 sm:pt-14 pb-20 lg:pt-16 lg:pb-28">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-14 items-center">
@@ -264,7 +325,7 @@ export default function LandingPage({ isAuthenticated }) {
           {/* HERO LEFT COLUMN */}
           <div className="lg:col-span-7 flex flex-col items-start space-y-6">
             
-            {/* Status Header Badge */}
+            {/* Live Telemetry Status Badges */}
             <div className="flex flex-wrap items-center gap-2.5">
               <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-md bg-[#0B0F19]/90 border border-emerald-500/30 text-emerald-400 text-xs font-mono tracking-wider font-semibold shadow-[0_0_15px_rgba(16,185,129,0.15)]">
                 <span className="relative flex h-2 w-2">
@@ -278,9 +339,21 @@ export default function LandingPage({ isAuthenticated }) {
                 <span className="text-cyan-400">#</span>
                 CAMPUS COMMUNITY HUB
               </div>
+
+              {liveTournament ? (
+                <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-red-950/80 border border-red-500/40 text-red-300 text-xs font-mono tracking-widest uppercase animate-pulse">
+                  <span className="h-2 w-2 rounded-full bg-red-500" />
+                  LIVE TOURNAMENT ACTIVE
+                </div>
+              ) : (
+                <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-slate-900/80 border border-slate-700/60 text-slate-400 text-xs font-mono tracking-wider">
+                  <Icons.Radio />
+                  <span>SYNCHRONIZED WITH BACKEND</span>
+                </div>
+              )}
             </div>
 
-            {/* Main Headline: Razor-sharp typography */}
+            {/* Main Headline */}
             <div className="space-y-2">
               <h1 className="text-5xl sm:text-6xl lg:text-7xl font-black font-['Space_Grotesk'] tracking-tight text-white uppercase leading-[1.03]">
                 ENTER THE{' '}
@@ -296,21 +369,27 @@ export default function LandingPage({ isAuthenticated }) {
               <span className="text-white font-medium">Your game, your ELO.</span>
             </p>
 
-            {/* Premium Game Chips Selector */}
+            {/* Division Chips (Reflects Real DB Active Tournaments) */}
             <div className="w-full pt-2">
               <div className="flex items-center justify-between text-[11px] font-mono tracking-widest text-slate-400 uppercase mb-3">
-                <span>SELECT TOURNAMENT DIVISION</span>
-                <span className="text-cyan-400 font-bold">{activeGame.tournamentsCount}</span>
+                <span>CAMPUS DIVISIONS</span>
+                <span className="text-cyan-400 font-bold">
+                  {gameCounts[selectedGameKey] > 0
+                    ? `${gameCounts[selectedGameKey]} LIVE CUPS IN DB`
+                    : 'NO LIVE CUPS IN DB'}
+                </span>
               </div>
 
               <div className="grid grid-cols-3 gap-3">
-                {GAMES.map((game) => {
-                  const isSelected = activeGame.id === game.id
+                {Object.entries(GAME_INFO).map(([key, game]) => {
+                  const isSelected = selectedGameKey === key
+                  const liveCount = gameCounts[key] || 0
+
                   return (
                     <button
-                      key={game.id}
+                      key={key}
                       type="button"
-                      onClick={() => setActiveGame(game)}
+                      onClick={() => setSelectedGameKey(key)}
                       className={`relative group p-4 rounded-xl border text-left transition-all duration-200 ${
                         isSelected
                           ? 'bg-[#0B101E]/95 border-cyan-400/80 shadow-[0_0_30px_rgba(6,182,212,0.25)]'
@@ -323,9 +402,13 @@ export default function LandingPage({ isAuthenticated }) {
                         }`}>
                           {game.tag}
                         </span>
-                        {isSelected && (
+                        {liveCount > 0 ? (
+                          <span className="px-1.5 py-0.2 rounded text-[9px] font-mono font-bold bg-red-950/80 text-red-400 border border-red-500/40">
+                            LIVE
+                          </span>
+                        ) : isSelected ? (
                           <span className="h-1.5 w-1.5 rounded-full bg-cyan-400 shadow-[0_0_8px_#06b6d4]" />
-                        )}
+                        ) : null}
                       </div>
 
                       <div className={`text-sm sm:text-base font-black font-['Space_Grotesk'] tracking-wider ${
@@ -335,7 +418,7 @@ export default function LandingPage({ isAuthenticated }) {
                       </div>
 
                       <div className="text-[11px] text-slate-400 truncate mt-0.5">
-                        {game.mode}
+                        {liveCount > 0 ? `${liveCount} Live Tournament` : game.mode}
                       </div>
                     </button>
                   )
@@ -390,145 +473,245 @@ export default function LandingPage({ isAuthenticated }) {
 
           </div>
 
-          {/* HERO RIGHT COLUMN: HIGH-TECH TOURNAMENT HUD */}
+          {/* HERO RIGHT COLUMN: DYNAMIC BACKEND-LINKED TOURNAMENT HUD */}
           <div className="lg:col-span-5 relative">
             
-            {/* Ambient Cyan Stage Glow behind the HUD card */}
+            {/* Ambient Stage Glow */}
             <div className="absolute -inset-1 rounded-3xl bg-cyan-500/20 blur-2xl opacity-60 pointer-events-none" />
 
             {/* Obsidian Glass HUD Card */}
             <div className="relative rounded-2xl bg-[#090D18]/90 border border-white/15 p-5 sm:p-6 shadow-[0_30px_70px_rgba(0,0,0,0.8)] backdrop-blur-2xl">
               
-              {/* Top HUD Telemetry */}
-              <div className="flex items-center justify-between border-b border-white/[0.08] pb-4 mb-5">
-                <div>
-                  <div className="flex items-center gap-2">
-                    <span className="h-2 w-2 rounded-full bg-cyan-400 shadow-[0_0_8px_#06b6d4]" />
-                    <span className="text-[11px] font-mono tracking-widest text-cyan-300 uppercase font-bold">
-                      {activeGame.bracket.seriesTitle}
+              {/* CASE 1: REAL LIVE TOURNAMENT RUNNING IN THE DATABASE */}
+              {liveTournament && liveMatches.length > 0 ? (
+                <>
+                  <div className="flex items-center justify-between border-b border-white/[0.08] pb-4 mb-5">
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="h-2 w-2 rounded-full bg-red-500 animate-ping" />
+                        <span className="text-[11px] font-mono tracking-widest text-red-400 uppercase font-bold">
+                          LIVE TOURNAMENT FEED
+                        </span>
+                      </div>
+                      <h3 className="text-lg font-black font-['Space_Grotesk'] text-white mt-1">
+                        {liveTournament.name}
+                      </h3>
+                    </div>
+
+                    <div className="text-right">
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-red-500/10 text-red-400 border border-red-500/30">
+                        ● SPECTATING LIVE
+                      </span>
+                      <p className="text-[11px] font-mono text-slate-400 mt-1 uppercase">
+                        {liveTournament.game}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Real Live Match Cards from Backend */}
+                  <div className="space-y-3.5">
+                    <div className="flex items-center justify-between text-[11px] font-mono tracking-wider text-slate-400 uppercase">
+                      <span>ACTIVE BRACKET MATCHES</span>
+                      <span>ROUND PROGRESSION</span>
+                    </div>
+
+                    {liveMatches.slice(0, 3).map((match, idx) => (
+                      <div key={match.id || idx} className="p-3.5 rounded-xl bg-[#0D1322] border border-white/[0.08]">
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="text-[10px] font-mono text-cyan-400 font-bold uppercase">
+                            ROUND {match.round} · MATCH #{idx + 1}
+                          </span>
+                          <span className={`text-[10px] font-mono px-2 py-0.5 rounded font-bold uppercase ${
+                            match.status === 'confirmed'
+                              ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/30'
+                              : match.status === 'disputed'
+                              ? 'bg-red-500/10 text-red-400 border border-red-500/30'
+                              : 'bg-amber-500/10 text-amber-400 border border-amber-500/30'
+                          }`}>
+                            {match.status}
+                          </span>
+                        </div>
+
+                        <div className="flex items-center justify-between py-1 border-b border-white/[0.04]">
+                          <span className="text-xs font-bold text-white tracking-wide truncate max-w-[180px]">
+                            {match.player1Name}
+                          </span>
+                          <span className="text-xs font-mono font-black text-cyan-400 bg-cyan-950/60 px-2 py-0.5 rounded">
+                            {match.score1 ?? '-'}
+                          </span>
+                        </div>
+
+                        <div className="flex items-center justify-between py-1 pt-1.5">
+                          <span className="text-xs font-semibold text-slate-300 tracking-wide truncate max-w-[180px]">
+                            {match.player2Name}
+                          </span>
+                          <span className="text-xs font-mono font-semibold text-slate-500 px-2 py-0.5">
+                            {match.score2 ?? '-'}
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+
+                    <Link
+                      to={`/bracket/${liveTournament.id}`}
+                      className="mt-3 flex items-center justify-center gap-2 w-full py-2.5 rounded-lg bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-400 font-bold text-xs uppercase tracking-wider border border-cyan-500/30 transition-all"
+                    >
+                      <span>Open Interactive Bracket</span>
+                      <Icons.ArrowRight />
+                    </Link>
+                  </div>
+                </>
+              ) : upcomingTournament ? (
+                /* CASE 2: REGISTRATION IS OPEN FOR AN UPCOMING TOURNAMENT */
+                <>
+                  <div className="flex items-center justify-between border-b border-white/[0.08] pb-4 mb-5">
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="h-2 w-2 rounded-full bg-cyan-400 shadow-[0_0_8px_#06b6d4]" />
+                        <span className="text-[11px] font-mono tracking-widest text-cyan-300 uppercase font-bold">
+                          NEXT UPCOMING TOURNAMENT
+                        </span>
+                      </div>
+                      <h3 className="text-lg font-black font-['Space_Grotesk'] text-white mt-1">
+                        {upcomingTournament.name}
+                      </h3>
+                    </div>
+
+                    <div className="text-right">
+                      <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded text-[10px] font-mono font-bold bg-cyan-500/10 text-cyan-400 border border-cyan-500/30">
+                        ● REGISTRATION OPEN
+                      </span>
+                      <p className="text-[11px] font-mono text-slate-400 mt-1 uppercase">
+                        {upcomingTournament.game}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="p-4 rounded-xl bg-[#0D1322] border border-white/[0.08] space-y-4">
+                    <div className="flex items-center justify-between text-xs font-mono">
+                      <span className="text-slate-400">TOURNAMENT FORMAT:</span>
+                      <span className="text-white font-bold">Single Elimination ({upcomingTournament.max_players} Slots)</span>
+                    </div>
+
+                    <div className="flex items-center justify-between text-xs font-mono">
+                      <span className="text-slate-400">REGISTRATION CLOSES:</span>
+                      <span className="text-amber-400 font-semibold">
+                        {upcomingTournament.registration_deadline
+                          ? new Date(upcomingTournament.registration_deadline).toLocaleDateString()
+                          : 'Coming Soon'}
+                      </span>
+                    </div>
+
+                    <div className="pt-2 border-t border-white/[0.04]">
+                      <p className="text-xs text-slate-400 leading-relaxed mb-3">
+                        The bracket will automatically generate as soon as registration closes and player seeds are assigned.
+                      </p>
+                      <Link
+                        to="/tournaments"
+                        className="flex items-center justify-center gap-2 w-full py-3 rounded-lg bg-gradient-to-r from-cyan-400 to-blue-500 hover:from-cyan-300 hover:to-blue-400 text-[#05070E] font-black text-xs uppercase tracking-wider shadow-lg transition-all"
+                      >
+                        <span>Join Tournament Now</span>
+                        <Icons.ArrowRight />
+                      </Link>
+                    </div>
+                  </div>
+                </>
+              ) : (
+                /* CASE 3: NO TOURNAMENTS CURRENTLY IN THE DATABASE (STANDBY STATE) */
+                <div className="py-4 text-center">
+                  
+                  {/* Standby Header */}
+                  <div className="flex items-center justify-between border-b border-white/[0.08] pb-3 mb-6">
+                    <div className="flex items-center gap-2">
+                      <span className="h-2 w-2 rounded-full bg-slate-500" />
+                      <span className="text-[11px] font-mono tracking-widest text-slate-400 uppercase font-bold">
+                        ARENA TELEMETRY // STAGE STANDBY
+                      </span>
+                    </div>
+                    <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-slate-800 text-slate-300 border border-slate-700">
+                      NO LIVE MATCHES
                     </span>
                   </div>
-                  <h3 className="text-lg font-black font-['Space_Grotesk'] text-white mt-1">
-                    {activeGame.bracket.stage}
+
+                  {/* Holographic Radar / Standby Graphic */}
+                  <div className="my-6 relative flex items-center justify-center">
+                    <div className="w-24 h-24 rounded-full border border-cyan-500/20 flex items-center justify-center animate-pulse">
+                      <div className="w-16 h-16 rounded-full border border-cyan-500/40 flex items-center justify-center">
+                        <div className="w-8 h-8 rounded-full bg-cyan-500/10 flex items-center justify-center text-cyan-400">
+                          <Icons.Radio />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <h3 className="text-lg font-black font-['Space_Grotesk'] text-white uppercase tracking-tight">
+                    Arena On Standby
                   </h3>
-                </div>
 
-                <div className="text-right">
-                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/30">
-                    SPECTATING
-                  </span>
-                  <p className="text-[11px] font-mono text-slate-400 mt-1">
-                    {activeGame.bracket.map}
+                  <p className="text-xs text-slate-400 mt-2 max-w-sm mx-auto leading-relaxed">
+                    There are currently no active tournament brackets running on the collegiate stage. As soon as an organiser launches a cup, live brackets and real-time scores will stream here automatically.
                   </p>
-                </div>
-              </div>
 
-              {/* Tournament Bracket Representation */}
-              <div className="space-y-4">
-                
-                {/* Round Label */}
-                <div className="flex items-center justify-between text-[11px] font-mono tracking-wider text-slate-400 uppercase">
-                  <span>Semi-Final Matches (BO3)</span>
-                  <span>Grand Final (BO5)</span>
-                </div>
-
-                {/* Match A */}
-                <div className="p-3.5 rounded-xl bg-[#0D1322] border border-white/[0.08] hover:border-white/20 transition-colors">
-                  <div className="flex items-center justify-between py-1 border-b border-white/[0.04]">
-                    <div className="flex items-center gap-2.5">
-                      <span className="text-[10px] font-mono text-slate-500 w-5">#{activeGame.bracket.semisA.seed1}</span>
-                      <span className="text-xs font-bold text-white tracking-wide">{activeGame.bracket.semisA.team1}</span>
+                  {/* Backend Status Telemetry Pill */}
+                  <div className="mt-5 p-3 rounded-xl bg-[#0D1322] border border-white/[0.08] text-left space-y-2">
+                    <div className="flex items-center justify-between text-[11px] font-mono">
+                      <span className="text-slate-400">DATABASE STATUS:</span>
+                      <span className="text-emerald-400 font-semibold flex items-center gap-1">
+                        <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
+                        SYNCED WITH SUPABASE
+                      </span>
                     </div>
-                    <span className="text-xs font-mono font-black text-cyan-400 bg-cyan-950/60 px-2 py-0.5 rounded border border-cyan-500/30">
-                      {activeGame.bracket.semisA.score1}
-                    </span>
-                  </div>
 
-                  <div className="flex items-center justify-between py-1 pt-1.5">
-                    <div className="flex items-center gap-2.5">
-                      <span className="text-[10px] font-mono text-slate-500 w-5">#{activeGame.bracket.semisA.seed2}</span>
-                      <span className="text-xs font-semibold text-slate-400 tracking-wide">{activeGame.bracket.semisA.team2}</span>
+                    <div className="flex items-center justify-between text-[11px] font-mono">
+                      <span className="text-slate-400">ACTIVE TOURNAMENTS:</span>
+                      <span className="text-slate-200 font-bold">0 LIVE IN ARENA</span>
                     </div>
-                    <span className="text-xs font-mono font-semibold text-slate-500 px-2 py-0.5">
-                      {activeGame.bracket.semisA.score2}
-                    </span>
-                  </div>
 
-                  <div className="flex items-center justify-between mt-2 pt-1.5 border-t border-white/[0.04] text-[10px] font-mono text-slate-400">
-                    <span className="text-emerald-400 font-semibold">ADVANCED TO FINALS</span>
-                    <span>CONFIRMED RESULT</span>
-                  </div>
-                </div>
-
-                {/* Match B */}
-                <div className="p-3.5 rounded-xl bg-[#0D1322] border border-white/[0.08] hover:border-white/20 transition-colors">
-                  <div className="flex items-center justify-between py-1 border-b border-white/[0.04]">
-                    <div className="flex items-center gap-2.5">
-                      <span className="text-[10px] font-mono text-slate-500 w-5">#{activeGame.bracket.semisB.seed1}</span>
-                      <span className="text-xs font-semibold text-slate-400 tracking-wide">{activeGame.bracket.semisB.team1}</span>
+                    <div className="flex items-center justify-between text-[11px] font-mono">
+                      <span className="text-slate-400">LAST SYNC:</span>
+                      <span className="text-slate-400">
+                        {lastChecked.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+                      </span>
                     </div>
-                    <span className="text-xs font-mono font-semibold text-slate-500 px-2 py-0.5">
-                      {activeGame.bracket.semisB.score1}
-                    </span>
                   </div>
 
-                  <div className="flex items-center justify-between py-1 pt-1.5">
-                    <div className="flex items-center gap-2.5">
-                      <span className="text-[10px] font-mono text-slate-500 w-5">#{activeGame.bracket.semisB.seed2}</span>
-                      <span className="text-xs font-bold text-white tracking-wide">{activeGame.bracket.semisB.team2}</span>
-                    </div>
-                    <span className="text-xs font-mono font-black text-cyan-400 bg-cyan-950/60 px-2 py-0.5 rounded border border-cyan-500/30">
-                      {activeGame.bracket.semisB.score2}
-                    </span>
-                  </div>
-
-                  <div className="flex items-center justify-between mt-2 pt-1.5 border-t border-white/[0.04] text-[10px] font-mono text-slate-400">
-                    <span className="text-emerald-400 font-semibold">ADVANCED TO FINALS</span>
-                    <span>CONFIRMED RESULT</span>
+                  {/* Quick CTAs to launch or browse tournaments */}
+                  <div className="mt-5 grid grid-cols-2 gap-3">
+                    <Link
+                      to="/tournaments"
+                      className="py-2.5 px-3 rounded-lg bg-white/[0.05] hover:bg-white/[0.08] border border-white/10 text-xs font-bold font-mono tracking-wider uppercase text-slate-300 hover:text-white transition-all text-center"
+                    >
+                      All Tournaments
+                    </Link>
+                    <Link
+                      to="/organiser-login"
+                      className="py-2.5 px-3 rounded-lg bg-cyan-500/10 hover:bg-cyan-500/20 border border-cyan-500/30 text-xs font-bold font-mono tracking-wider uppercase text-cyan-300 transition-all text-center flex items-center justify-center gap-1"
+                    >
+                      <span>Host Tournament</span>
+                      <Icons.ChevronRight />
+                    </Link>
                   </div>
                 </div>
+              )}
 
-                {/* Championship Match Card (Active) */}
-                <div className="relative p-4 rounded-xl bg-gradient-to-br from-[#0F172A] via-[#0B101E] to-[#0A1424] border border-cyan-400/40 shadow-lg">
-                  <div className="flex items-center justify-between mb-3">
-                    <span className="text-[10px] font-mono tracking-widest text-amber-300 font-bold uppercase flex items-center gap-1.5">
-                      <Icons.Trophy />
-                      CHAMPIONSHIP MATCH
-                    </span>
-                    <span className="text-[10px] font-mono font-bold text-cyan-300 bg-cyan-950/80 border border-cyan-400/30 px-2 py-0.5 rounded">
-                      {activeGame.bracket.final.status}
-                    </span>
-                  </div>
-
-                  <div className="grid grid-cols-7 items-center gap-2 py-1">
-                    <div className="col-span-3">
-                      <p className="text-xs font-extrabold text-white truncate">{activeGame.bracket.final.team1}</p>
-                      <p className="text-[10px] font-mono text-cyan-400">FINALIST 01</p>
-                    </div>
-
-                    <div className="col-span-1 text-center font-mono font-black text-sm text-cyan-300 bg-[#05070E] py-1.5 rounded border border-white/10">
-                      {activeGame.bracket.final.score1}:{activeGame.bracket.final.score2}
-                    </div>
-
-                    <div className="col-span-3 text-right">
-                      <p className="text-xs font-extrabold text-white truncate">{activeGame.bracket.final.team2}</p>
-                      <p className="text-[10px] font-mono text-cyan-400">FINALIST 02</p>
-                    </div>
-                  </div>
-
-                  <div className="mt-3 pt-2.5 border-t border-white/[0.06] flex items-center justify-between text-[11px] font-mono">
-                    <span className="text-slate-400">RATING AT STAKE:</span>
-                    <span className="text-cyan-300 font-bold">{activeGame.bracket.eloImpact}</span>
-                  </div>
-                </div>
-
-              </div>
-
-              {/* Bottom Telemetry */}
+              {/* Bottom Telemetry Footer */}
               <div className="mt-4 pt-3 border-t border-white/[0.06] flex items-center justify-between text-[10px] font-mono text-slate-500">
-                <span>BRACKET PROTOCOL // SINGLE ELIMINATION</span>
-                <span className="text-cyan-400">ENGINE v2.4</span>
+                <span className="flex items-center gap-1.5">
+                  <span className={`h-1.5 w-1.5 rounded-full ${liveTournament ? 'bg-red-400' : 'bg-emerald-400'}`} />
+                  {liveTournament ? 'LIVE FEED CONNECTED' : 'BACKEND TELEMETRY ACTIVE'}
+                </span>
+                <button
+                  type="button"
+                  onClick={fetchLiveTelemetry}
+                  disabled={loadingBackend}
+                  className="hover:text-cyan-400 transition-colors flex items-center gap-1 disabled:opacity-50"
+                  title="Refresh live tournament data from backend"
+                >
+                  <Icons.Refresh />
+                  <span>REFRESH</span>
+                </button>
               </div>
+
             </div>
 
           </div>
@@ -580,7 +763,6 @@ export default function LandingPage({ isAuthenticated }) {
          ======================================================== */}
       <section className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-24">
         <div className="relative rounded-3xl overflow-hidden border border-white/10 bg-gradient-to-r from-[#090E1C] via-[#0B1224] to-[#070B14] p-8 sm:p-14 text-center shadow-2xl">
-          {/* Subtle cyan glow in the center */}
           <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[400px] h-[300px] bg-cyan-500/10 rounded-full blur-[100px] pointer-events-none" />
 
           <div className="relative z-10 max-w-2xl mx-auto space-y-4">
@@ -612,7 +794,7 @@ export default function LandingPage({ isAuthenticated }) {
       </section>
 
       {/* ========================================================
-          FOOTER: MINIMALIST CYBER / BROADCAST FOOTER
+          FOOTER
          ======================================================== */}
       <footer className="relative z-10 border-t border-white/[0.08] bg-[#030408] py-10">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col md:flex-row items-center justify-between gap-6">
