@@ -47,23 +47,38 @@ function App() {
     let active = true
 
     const loadSession = async () => {
-      const { data } = await supabase.auth.getSession()
-      if (!active) return
-      setSession(data.session ?? null)
-      setLoading(false)
+      try {
+        const { data, error } = await supabase.auth.getSession()
+        if (error) {
+          console.warn('Session retrieval error:', error.message)
+        }
+        if (!active) return
+        setSession(data?.session ?? null)
+      } catch (err) {
+        console.error('Failed to get session:', err)
+      } finally {
+        if (active) setLoading(false)
+      }
     }
 
     loadSession()
 
+    // Safety timeout: Never leave user stuck on loading spinner if Supabase network is slow
+    const fallbackTimer = setTimeout(() => {
+      if (active) setLoading(false)
+    }, 2500)
+
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, nextSession) => {
+      if (!active) return
       setSession(nextSession ?? null)
       setLoading(false)
     })
 
     return () => {
       active = false
+      clearTimeout(fallbackTimer)
       subscription.unsubscribe()
     }
   }, [])
