@@ -61,6 +61,77 @@ router.post('/:match_id/confirm', async (req, res) => {
       },
     ]);
 
+    // Check whether the entire round that match belongs to is now fully confirmed
+    const currentRound = Number(match.round);
+    const { data: roundMatches, error: roundMatchesErr } = await supabase
+      .from('matches')
+      .select('*')
+      .eq('tournament_id', match.tournament_id)
+      .eq('round', currentRound)
+      .order('created_at', { ascending: true })
+      .order('id', { ascending: true });
+
+    if (roundMatchesErr) throw roundMatchesErr;
+
+    const sortedMatches = [...(roundMatches || [])].sort((a, b) => {
+      const timeA = new Date(a.created_at || 0).getTime();
+      const timeB = new Date(b.created_at || 0).getTime();
+      if (timeA !== timeB) return timeA - timeB;
+      return String(a.id).localeCompare(String(b.id));
+    });
+
+    if (sortedMatches.length === 1 && sortedMatches[0].status === 'confirmed') {
+      // Final round confirmed — mark tournament as completed
+      const { error: tournamentUpdateErr } = await supabase
+        .from('tournaments')
+        .update({ status: 'completed' })
+        .eq('id', match.tournament_id);
+      if (tournamentUpdateErr) throw tournamentUpdateErr;
+    } else if (
+      sortedMatches.length > 1 &&
+      sortedMatches.every(m => m.status === 'confirmed' && m.winner_id)
+    ) {
+      const nextRound = currentRound + 1;
+
+      // Check whether matches for that next round already exist for this tournament
+      const { data: existingNextRoundMatches, error: nextRoundCheckErr } = await supabase
+        .from('matches')
+        .select('id')
+        .eq('tournament_id', match.tournament_id)
+        .eq('round', nextRound);
+
+      if (nextRoundCheckErr) throw nextRoundCheckErr;
+
+      if (!existingNextRoundMatches || existingNextRoundMatches.length === 0) {
+        const nextRoundMatches = [];
+        for (let i = 0; i < sortedMatches.length; i += 2) {
+          if (i + 1 < sortedMatches.length) {
+            nextRoundMatches.push({
+              tournament_id: match.tournament_id,
+              player1_id: sortedMatches[i].winner_id,
+              player2_id: sortedMatches[i + 1].winner_id,
+              round: nextRound,
+              status: 'pending',
+            });
+          }
+        }
+
+        if (nextRoundMatches.length > 0) {
+          const { error: insertErr } = await supabase
+            .from('matches')
+            .insert(nextRoundMatches);
+
+          if (insertErr) {
+            if (insertErr.code === '23505') {
+              console.warn('Next round matches already exist (23505 unique constraint swallowed)');
+            } else {
+              throw insertErr;
+            }
+          }
+        }
+      }
+    }
+
     res.json({ winnerNewElo, loserNewElo });
   } catch (err) {
     console.error(err);
